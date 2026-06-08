@@ -1,5 +1,5 @@
 provider "aws" {
- region = var.REGION
+ region = "eu-west-1"
 }
 terraform {
  backend "s3" {
