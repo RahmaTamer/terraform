@@ -44,17 +44,24 @@ jobs:
 
       - name: Terraform Init
         run: |
+          cd infra
           terraform init
-          ls
+          
 
-      - name: Terraform Apply
+      - name: terraform apply
         if: ${{ inputs.action == 'apply' }}
         run: terraform apply -auto-approve
 
-      - name: Terraform Plan
+      - name: |
+         cd infra
+         terraform plan
         if: ${{ inputs.action == 'plan' }}
-        run: terraform plan
+        run: |
+            cd infra 
+            terraform plan
 
-      - name: Terraform Destroy
+      - name: |
+         cd infra
+         terraform destroy
         if: ${{ inputs.action == 'destroy' }}
         run: terraform destroy -auto-approve
