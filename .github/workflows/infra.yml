@@ -12,6 +12,7 @@ on:
           - plan
           - apply
           - destroy
+
       env:
         type: choice
         description: Select Environment
@@ -23,6 +24,7 @@ jobs:
   terraform-action:
     name: Terraform Job
     runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
 
     steps:
       - name: Checkout Repo
