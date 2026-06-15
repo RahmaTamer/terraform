@@ -1,16 +1,10 @@
-
-
-
 resource "aws_vpc" "main" {
-
   cidr_block = var.vpc_cidr
 
   tags = {
     Name = var.vpc_name
   }
 }
-
-
 
 resource "aws_subnet" "public_subnet_1" {
   vpc_id                  = aws_vpc.main.id
@@ -23,8 +17,6 @@ resource "aws_subnet" "public_subnet_1" {
   }
 }
 
-
-
 resource "aws_subnet" "public_subnet_2" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_2_cidr
@@ -36,7 +28,6 @@ resource "aws_subnet" "public_subnet_2" {
   }
 }
 
-
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
 
@@ -44,8 +35,6 @@ resource "aws_internet_gateway" "gw" {
     Name = "main-igw"
   }
 }
-
-
 
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
@@ -65,14 +54,14 @@ resource "aws_route_table_association" "public_1" {
   route_table_id = aws_route_table.public_rt.id
 }
 
-
 resource "aws_route_table_association" "public_2" {
   subnet_id      = aws_subnet.public_subnet_2.id
   route_table_id = aws_route_table.public_rt.id
 }
 
-
-
+# =========================
+# SECURITY GROUPS
+# =========================
 
 resource "aws_security_group" "alb_sg" {
   name   = "alb-sg"
@@ -93,7 +82,6 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-
 resource "aws_security_group" "ec2_sg" {
   name   = "ec2-sg"
   vpc_id = aws_vpc.main.id
@@ -113,10 +101,12 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
-
+# =========================
+# ALB (FIXED NAME)
+# =========================
 
 resource "aws_lb" "app_lb" {
-  name               = "app-alb"
+  name               = "app-alb-dev-rahma"
   load_balancer_type = "application"
   internal           = false
 
@@ -128,11 +118,12 @@ resource "aws_lb" "app_lb" {
   ]
 }
 
-
-
+# =========================
+# TARGET GROUP (FIXED NAME)
+# =========================
 
 resource "aws_lb_target_group" "tg" {
-  name     = "app-tg"
+  name     = "app-tg-dev-rahma"
   port     = 80
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
@@ -146,7 +137,6 @@ resource "aws_lb_target_group" "tg" {
   }
 }
 
-
 resource "aws_lb_listener" "listener" {
   load_balancer_arn = aws_lb.app_lb.arn
   port              = 80
@@ -158,6 +148,10 @@ resource "aws_lb_listener" "listener" {
   }
 }
 
+# =========================
+# AMI
+# =========================
+
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
@@ -168,7 +162,9 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-
+# =========================
+# LAUNCH TEMPLATE
+# =========================
 
 resource "aws_launch_template" "web" {
   name_prefix   = "web-lt"
@@ -186,10 +182,14 @@ resource "aws_launch_template" "web" {
   }))
 }
 
+# =========================
+# AUTO SCALING GROUP
+# =========================
+
 resource "aws_autoscaling_group" "asg" {
-  desired_capacity    = 2
-  min_size           = 2
-  max_size           = 4
+  desired_capacity = 2
+  min_size         = 2
+  max_size         = 4
 
   vpc_zone_identifier = [
     aws_subnet.public_subnet_1.id,
