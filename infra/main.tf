@@ -62,8 +62,8 @@ resource "aws_route_table_association" "public_2" {
 # ================= SECURITY GROUPS =================
 
 resource "aws_security_group" "alb_sg" {
-  name   = "alb-sg-dev"
-  vpc_id = aws_vpc.main.id
+  name_prefix = "alb-sg-dev-" # ✅ MODIFIED: استخدمنا name_prefix بدلاً من name
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     from_port   = 80
@@ -78,11 +78,16 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  # ✅ MODIFIED: عشان يبني الجديد الأول قبل ما يمسح المعلق
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_security_group" "ec2_sg" {
-  name   = "ec2-sg-dev"
-  vpc_id = aws_vpc.main.id
+  name_prefix = "ec2-sg-dev-" # ✅ MODIFIED: استخدمنا name_prefix بدلاً من name
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     from_port       = 80
@@ -96,6 +101,11 @@ resource "aws_security_group" "ec2_sg" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # ✅ MODIFIED: نفس الكلام هنا للـ EC2 SG
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
@@ -159,7 +169,7 @@ data "aws_ami" "amazon_linux" {
 # ================= LAUNCH TEMPLATE =================
 
 resource "aws_launch_template" "web" {
-  name_prefix   = "web-lt"
+  name_prefix   = "web-lt-"
   image_id      = data.aws_ami.amazon_linux.id
   instance_type = "t2.micro"
 
@@ -168,14 +178,19 @@ resource "aws_launch_template" "web" {
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
     html_content = file("${path.module}/index.html")
   }))
+
+  # ✅ MODIFIED: طالما الـ SG معتمد عليه لازم نحدد ترتيب الحذف هنا كمان
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ================= AUTO SCALING GROUP =================
 
 resource "aws_autoscaling_group" "asg" {
   desired_capacity     = 2
-  min_size            = 2
-  max_size            = 4
+  min_size             = 2
+  max_size             = 4
 
   vpc_zone_identifier = [
     aws_subnet.public_subnet_1.id,
@@ -191,4 +206,9 @@ resource "aws_autoscaling_group" "asg" {
 
   health_check_type         = "ELB"
   health_check_grace_period = 120
+
+  # ✅ MODIFIED: عشان الـ ASG يربط بالـ Launch Template الجديد بسلاسة
+  lifecycle {
+    create_before_destroy = true
+  }
 }
