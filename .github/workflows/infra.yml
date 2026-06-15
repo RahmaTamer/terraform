@@ -9,10 +9,9 @@ on:
         type: choice
         description: Select Terraform Action
         options:
+          - plan
           - apply
           - destroy
-          - plan
-
       env:
         type: choice
         description: Select Environment
@@ -23,7 +22,6 @@ on:
 jobs:
   terraform-action:
     name: Terraform Job
-    environment: ${{ inputs.env }}
     runs-on: ubuntu-latest
 
     steps:
@@ -37,8 +35,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
 
-      - uses: little-core-labs/install-terraform@v2.0.0
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -46,22 +42,21 @@ jobs:
         run: |
           cd infra
           terraform init
-          
 
-      - name: terraform apply
-        if: ${{ inputs.action == 'apply' }}
-        run: terraform apply -auto-approve
-
-      - name: |
-         cd infra
-         terraform plan
+      - name: Terraform Plan
         if: ${{ inputs.action == 'plan' }}
         run: |
-            cd infra 
-            terraform plan
+          cd infra
+          terraform plan
 
-      - name: |
-         cd infra
-         terraform destroy
+      - name: Terraform Apply
+        if: ${{ inputs.action == 'apply' }}
+        run: |
+          cd infra
+          terraform apply -auto-approve
+
+      - name: Terraform Destroy
         if: ${{ inputs.action == 'destroy' }}
-        run: terraform destroy -auto-approve
+        run: |
+          cd infra
+          terraform destroy -auto-approve
