@@ -59,12 +59,10 @@ resource "aws_route_table_association" "public_2" {
   route_table_id = aws_route_table.public_rt.id
 }
 
-# =========================
-# SECURITY GROUPS
-# =========================
+# ================= SECURITY GROUPS =================
 
 resource "aws_security_group" "alb_sg" {
-  name   = "alb-sg"
+  name   = "alb-sg-dev"
   vpc_id = aws_vpc.main.id
 
   ingress {
@@ -83,7 +81,7 @@ resource "aws_security_group" "alb_sg" {
 }
 
 resource "aws_security_group" "ec2_sg" {
-  name   = "ec2-sg"
+  name   = "ec2-sg-dev"
   vpc_id = aws_vpc.main.id
 
   ingress {
@@ -101,12 +99,10 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
-# =========================
-# ALB (FIXED NAME)
-# =========================
+# ================= ALB =================
 
 resource "aws_lb" "app_lb" {
-  name               = "app-alb-dev-rahma"
+  name               = "app-alb-dev-${var.vpc_name}"
   load_balancer_type = "application"
   internal           = false
 
@@ -118,12 +114,10 @@ resource "aws_lb" "app_lb" {
   ]
 }
 
-# =========================
-# TARGET GROUP (FIXED NAME)
-# =========================
+# ================= TARGET GROUP =================
 
 resource "aws_lb_target_group" "tg" {
-  name     = "app-tg-dev-rahma"
+  name     = "app-tg-dev-${var.vpc_name}"
   port     = 80
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
@@ -137,6 +131,8 @@ resource "aws_lb_target_group" "tg" {
   }
 }
 
+# ================= LISTENER =================
+
 resource "aws_lb_listener" "listener" {
   load_balancer_arn = aws_lb.app_lb.arn
   port              = 80
@@ -148,9 +144,7 @@ resource "aws_lb_listener" "listener" {
   }
 }
 
-# =========================
-# AMI
-# =========================
+# ================= AMI =================
 
 data "aws_ami" "amazon_linux" {
   most_recent = true
@@ -162,9 +156,7 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# =========================
-# LAUNCH TEMPLATE
-# =========================
+# ================= LAUNCH TEMPLATE =================
 
 resource "aws_launch_template" "web" {
   name_prefix   = "web-lt"
@@ -173,23 +165,17 @@ resource "aws_launch_template" "web" {
 
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
-  metadata_options {
-    http_tokens = "required"
-  }
-
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
     html_content = file("${path.module}/index.html")
   }))
 }
 
-# =========================
-# AUTO SCALING GROUP
-# =========================
+# ================= AUTO SCALING GROUP =================
 
 resource "aws_autoscaling_group" "asg" {
-  desired_capacity = 2
-  min_size         = 2
-  max_size         = 4
+  desired_capacity     = 2
+  min_size            = 2
+  max_size            = 4
 
   vpc_zone_identifier = [
     aws_subnet.public_subnet_1.id,
@@ -203,5 +189,6 @@ resource "aws_autoscaling_group" "asg" {
 
   target_group_arns = [aws_lb_target_group.tg.arn]
 
-  health_check_type = "ELB"
+  health_check_type         = "ELB"
+  health_check_grace_period = 120
 }
